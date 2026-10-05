@@ -18,6 +18,7 @@ import {
   type AllocationSpec,
   type ExecutionTiming,
   type Logger,
+  type OperatingMode,
   type OrderSizing,
   type Plan,
   type PlanKind,
@@ -94,6 +95,9 @@ export interface TradeRequest {
   simulate?: boolean;
   title?: string;
   kind?: Extract<PlanKind, 'TRADE' | 'EXIT'>;
+  /** Pre-trade checks done by the caller (e.g. risk policy) that must block execution. */
+  extraBlockers?: string[];
+  extraWarnings?: string[];
 }
 
 export interface DistributionRequest {
@@ -272,8 +276,8 @@ export class ExecutionEngine extends EventEmitter<EngineEvents> {
     this.d.mode.assertCanPlan();
     if (r.mint === WSOL_MINT) throw new TerminalError('VALIDATION', 'Cannot trade SOL against itself');
     if (r.slippageBps < 1 || r.slippageBps > 5_000) throw new TerminalError('VALIDATION', 'slippage must be 1–5000 bps');
-    const warnings: string[] = [];
-    const blockers: string[] = [];
+    const warnings: string[] = [...(r.extraWarnings ?? [])];
+    const blockers: string[] = [...(r.extraBlockers ?? [])];
     const selfTrade = this.d.selfTrade.check(r.mint, r.side);
     if (selfTrade) blockers.push(selfTrade);
 
@@ -439,7 +443,19 @@ export class ExecutionEngine extends EventEmitter<EngineEvents> {
    * Execute a previewed plan. `confirmHash` must equal the plan hash shown in
    * the preview: if anything about the plan changed, execution is refused.
    */
-  async execute(planId: string, confirmHash: string): Promise<ExecutionSummary> {
+  execute(planId: string, confirmHash: string): Promise<ExecutionSummary> {
+    try {
+      return this.start(planId, confirmHash).done;
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  /**
+   * Validate synchronously (throws on any refusal), then run in the
+   * background. Progress is reported through 'leg' / 'plan' events.
+   */
+  start(planId: string, confirmHash: string): { planId: string; done: Promise<ExecutionSummary> } {
     const { plan, status } = this.getPlan(planId);
     if (status !== 'PREVIEW') throw new TerminalError('VALIDATION', `Plan is ${status}, not executable`);
     if (hashPlan(stripHash(plan)) !== plan.hash || confirmHash !== plan.hash) {
@@ -460,10 +476,15 @@ export class ExecutionEngine extends EventEmitter<EngineEvents> {
     const mint = plan.params.mint as string | undefined;
     const side = plan.params.side as Side | undefined;
     if ((plan.kind === 'TRADE' || plan.kind === 'EXIT') && mint && side) this.d.selfTrade.assert(mint, side);
-
+    if (this.running.has(planId)) throw new TerminalError('VALIDATION', 'Plan is already executing');
     this.running.add(planId);
-    if (mint && (plan.kind === 'TRADE' || plan.kind === 'EXIT')) this.inFlightMints.add(mint);
     this.d.repos.plans.setStatus(planId, 'EXECUTING');
+    return { planId, done: this.run(plan, mode, mint) };
+  }
+
+  private async run(plan: Plan, mode: OperatingMode, mint: string | undefined): Promise<ExecutionSummary> {
+    const planId = plan.id;
+    if (mint && (plan.kind === 'TRADE' || plan.kind === 'EXIT')) this.inFlightMints.add(mint);
     this.emit('plan', { planId, status: 'EXECUTING', at: this.now() });
 
     const auditIds = new Map<string, number>();

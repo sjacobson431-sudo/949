@@ -1,0 +1,23 @@
+{
+  "name": "@term/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/server.ts",
+  "scripts": {
+    "start": "tsx src/main.ts",
+    "dev": "tsx watch src/main.ts"
+  },
+  "dependencies": {
+    "@term/core": "workspace:*",
+    "@term/portfolio": "workspace:*",
+    "@term/runtime": "workspace:*",
+    "@term/risk-engine": "workspace:*",
+    "@term/solana-client": "workspace:*",
+    "ws": "^8.18.3",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.18.1"
+  }
+}

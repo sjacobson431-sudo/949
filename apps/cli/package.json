@@ -1,0 +1,14 @@
+{
+  "name": "@term/cli",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": { "sol-term": "src/index.ts" },
+  "scripts": { "start": "tsx src/index.ts" },
+  "dependencies": {
+    "@term/core": "workspace:*",
+    "@term/portfolio": "workspace:*",
+    "@term/runtime": "workspace:*",
+    "commander": "^14.0.0"
+  }
+}

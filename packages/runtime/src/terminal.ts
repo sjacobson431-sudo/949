@@ -82,7 +82,9 @@ export class Terminal {
     const sec = this.security();
     this.vault = new Vault(this.repos.vault, { kdf: config.kdf, allowWeakPassword: config.allowWeakPassword });
     this.session = new SessionManager(this.vault, { idleLockMs: sec.idleLockMinutes * 60_000, maxSessionMs: sec.maxSessionHours * 3_600_000 });
-    this.mode = new ModeGuard(config.startMode);
+    // Resume the last non-LIVE mode the operator chose; LIVE always needs fresh re-auth.
+    const last = this.repos.settings.get<OperatingMode | null>('lastMode', null);
+    this.mode = new ModeGuard(last && last !== 'LIVE' ? last : config.startMode);
     this.vault.onLock(() => {
       this.mode.demoteFromLive();
       this.log.info('vault locked');
