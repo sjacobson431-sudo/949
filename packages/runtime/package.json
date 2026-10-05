@@ -1,0 +1,23 @@
+{
+  "name": "@term/runtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@term/core": "workspace:*",
+    "@term/security": "workspace:*",
+    "@term/database": "workspace:*",
+    "@term/solana-client": "workspace:*",
+    "@term/wallet-manager": "workspace:*",
+    "@term/price-service": "workspace:*",
+    "@term/token-analysis": "workspace:*",
+    "@term/risk-engine": "workspace:*",
+    "@term/trade-engine": "workspace:*",
+    "@term/execution-engine": "workspace:*",
+    "@term/portfolio": "workspace:*",
+    "@term/position-manager": "workspace:*",
+    "@solana/web3.js": "^1.98.4"
+  }
+}

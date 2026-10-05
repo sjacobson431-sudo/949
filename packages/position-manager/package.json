@@ -1,0 +1,16 @@
+{
+  "name": "@term/position-manager",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "dependencies": {
+    "@term/core": "workspace:*",
+    "@term/database": "workspace:*",
+    "@term/execution-engine": "workspace:*",
+    "@term/portfolio": "workspace:*",
+    "@term/trade-engine": "workspace:*",
+    "@term/solana-client": "workspace:*"
+  }
+}

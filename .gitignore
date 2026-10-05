@@ -1,0 +1,12 @@
+node_modules/
+.next/
+dist/
+coverage/
+*.tsbuildinfo
+data/
+*.db
+*.db-*
+.env
+.env.local
+exports/
+__pycache__/
