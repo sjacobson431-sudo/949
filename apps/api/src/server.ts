@@ -44,6 +44,15 @@ export function createApiServer(term: Terminal, opts: ServerOptions): { server: 
   const unlockGuard = new UnlockGuard();
   registerRoutes(router, { term, onUnlocked: () => undefined, unlockGuard });
 
+  // Accept the configured dashboard origin under both loopback spellings.
+  const origins = new Set([opts.dashboardOrigin]);
+  try {
+    const u = new URL(opts.dashboardOrigin);
+    for (const h of ['localhost', '127.0.0.1']) if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') origins.add(`${u.protocol}//${h}${u.port ? ':' + u.port : ''}`);
+  } catch {
+    /* keep as-is */
+  }
+  const originOk = (o: string | undefined) => !o || origins.has(o);
   const allowedHosts = new Set([`127.0.0.1:${opts.port}`, `localhost:${opts.port}`, `[::1]:${opts.port}`]);
   const bearer = (req: IncomingMessage): string | null => {
     const h = req.headers.authorization;
@@ -54,7 +63,7 @@ export function createApiServer(term: Terminal, opts: ServerOptions): { server: 
     const origin = req.headers.origin;
     res.setHeader('x-content-type-options', 'nosniff');
     res.setHeader('referrer-policy', 'no-referrer');
-    if (origin === opts.dashboardOrigin) {
+    if (origin && origins.has(origin)) {
       res.setHeader('access-control-allow-origin', origin);
       res.setHeader('vary', 'origin');
       res.setHeader('access-control-allow-headers', 'authorization, content-type');
@@ -62,7 +71,7 @@ export function createApiServer(term: Terminal, opts: ServerOptions): { server: 
     }
     try {
       if (!allowedHosts.has(req.headers.host ?? '')) return send(res, 421, { error: 'BAD_HOST', message: 'Host not allowed' });
-      if (origin && origin !== opts.dashboardOrigin) return send(res, 403, { error: 'BAD_ORIGIN', message: 'Origin not allowed' });
+      if (!originOk(origin)) return send(res, 403, { error: 'BAD_ORIGIN', message: 'Origin not allowed' });
       if (req.method === 'OPTIONS') return send(res, 204, null);
 
       const url = new URL(req.url ?? '/', `http://${req.headers.host}`);
@@ -93,7 +102,7 @@ export function createApiServer(term: Terminal, opts: ServerOptions): { server: 
     const ok =
       url.pathname === '/ws' &&
       allowedHosts.has(req.headers.host ?? '') &&
-      (!req.headers.origin || req.headers.origin === opts.dashboardOrigin) &&
+      originOk(req.headers.origin) &&
       term.session.verifyToken(url.searchParams.get('token'));
     if (!ok) {
       socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');

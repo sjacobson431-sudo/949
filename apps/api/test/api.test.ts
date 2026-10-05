@@ -38,6 +38,8 @@ describe('engine API', () => {
     expect((await call('GET', '/api/status')).json.initialized).toBe(false);
     expect((await call('GET', '/api/wallets')).status).toBe(401);
     expect((await call('GET', '/api/status', undefined, { origin: 'https://evil.example' })).status).toBe(403);
+    // the dashboard origin is accepted under both loopback spellings
+    expect((await call('GET', '/api/status', undefined, { origin: 'http://127.0.0.1:3999' })).status).toBe(200);
     // DNS-rebinding defence: a foreign Host header is refused
     const status = await new Promise<number>((resolve, reject) => {
       const req = request({ host: '127.0.0.1', port: PORT, path: '/api/status', headers: { host: 'attacker.example' } }, (res) => {

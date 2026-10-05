@@ -1,0 +1,25 @@
+# Both services publish to 127.0.0.1 ONLY. Never expose the engine API to a network.
+services:
+  api:
+    build: { context: ., target: api }
+    env_file: .env
+    environment:
+      TERM_DATA_DIR: /data
+      TERM_API_HOST: 0.0.0.0          # inside the container; published to loopback below
+      TERM_DASHBOARD_ORIGIN: http://localhost:3000
+    volumes:
+      - ./data:/data
+    ports:
+      - "127.0.0.1:8787:8787"
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      target: dashboard
+      args:
+        NEXT_PUBLIC_API_URL: http://127.0.0.1:8787
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on: [api]
+    restart: unless-stopped
